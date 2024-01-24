@@ -6,7 +6,7 @@
 */
 
 
-model basemodel
+model modelex3
 
 /* Insert your model definition here */
 global{
@@ -61,9 +61,9 @@ species butterfly{
 			my_icon <-image_file("../includes/whitebutterfly.png");
 		}
 		else{
-			red <- 127;
-			green <- 127;
-			blue <- 127;
+			red <-127;
+			green <-127;
+			blue <-127;
 			color <-rgb(red, green, blue, 255);
 			my_icon <-image_file("../includes/graybutterfly.png");
 		}
@@ -76,9 +76,10 @@ species butterfly{
 		my_cycle <- my_cycle+1;
 	}
 	reflex butterfly_die when: ((my_cycle+1) mod butterfly_life_cycle=0){
+		write "Die";
 		do die;
 	}
-	
+
 	// reproduce once in its lifecycle, in the middle of its lifecycle
 	reflex reproduce when: ((my_cycle+1) mod (butterfly_life_cycle/2)=0){
 		list<cell>cell_surroundings <- my_cell.neighbors where(!(empty(butterfly inside each)));
@@ -170,7 +171,10 @@ species predator {
 	
 	reflex move{
 		cell next_cell <- one_of(my_cell.neighbors where(empty(predator inside each)));
-		list<butterfly>butterflies <-butterfly inside next_cell;
+		int color_dominant <- get_most_color();
+		
+		// extension 1: hunt the most dominant color 
+		list<butterfly>butterflies <-butterfly inside next_cell where (each.red=color_dominant);
 		if (length(butterflies)>0){
 			if (abs(my_cell.red-butterflies[0].red) > color_threshold_camouflage
 				and abs(my_cell.green-butterflies[0].green) > color_threshold_camouflage
@@ -186,6 +190,21 @@ species predator {
 		next_cell.is_occupied<- true;
 		my_cell <- next_cell;
 		location <- next_cell.location ;	
+	}
+	
+	action get_most_color{
+		int max_butterflies <- max(nb_butterfly_white, nb_butterfly_black, nb_butterfly_gray);
+		int red_color;
+		if (max_butterflies = nb_butterfly_white){
+		    red_color <- 255;
+		}
+		else if (max_butterflies = nb_butterfly_black){
+		    red_color <- 0;
+		}
+		else{
+		    red_color <- 127;
+		}
+		return red_color;
 	}
 	
 
@@ -210,6 +229,15 @@ grid cell height:cell_height width:cell_width neighbors: neighborhood_size{
 		green <- color_value;
 		blue <- color_value;	
 		color <-rgb(red, green, blue, 255);
+	}
+	
+	//extension 2: gradient change in each cycle
+	reflex change_color{
+		int color_value <- int((location.x-1+ cycle*2)mod 100/2*color_increment);
+		red <- color_value;
+		green <- color_value;
+		blue <- color_value;
+		color <-rgb(color_value, color_value, color_value, 255);
 	}
 }
 
@@ -237,4 +265,23 @@ experiment exp type: gui {
 		monitor "Number of gray butterfly" value: nb_butterfly_gray;
 		monitor "Number of predators" value: nb_predator;
 	}
+}
+
+
+
+experiment exp_params type: batch repeat: 8 until: (nb_butterfly=0) or (cycle>100) {
+	parameter "nb_predators_init:" var: nb_predator_init min: 30 max: 100 step: 5;
+	permanent {
+		display raise_level type:2d{
+			chart "Butterfly chart" type: series 
+				x_serie_labels: (nb_predator_init) x_label: 'number_of_butterfly'{						
+				data "mean_butterfly_white" value: mean(simulations collect each.nb_butterfly_white);
+				data "mean_butterfly_black" value: mean(simulations collect each.nb_butterfly_black);
+				data "mean_butterfly_gray" value: mean(simulations collect each.nb_butterfly_gray);
+					
+							
+			}
+		}		
+	}
+	
 }

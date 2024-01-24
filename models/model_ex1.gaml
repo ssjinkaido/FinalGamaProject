@@ -6,7 +6,7 @@
 */
 
 
-model basemodel
+model modelex1
 
 /* Insert your model definition here */
 global{
@@ -34,6 +34,8 @@ global{
 		create butterfly number: nb_butterfly_init;
 		create predator number: nb_predator_init;
 	}
+	
+
 }
 
 species butterfly{
@@ -61,9 +63,9 @@ species butterfly{
 			my_icon <-image_file("../includes/whitebutterfly.png");
 		}
 		else{
-			red <- 127;
-			green <- 127;
-			blue <- 127;
+			red <-127;
+			green <-127;
+			blue <-127;
 			color <-rgb(red, green, blue, 255);
 			my_icon <-image_file("../includes/graybutterfly.png");
 		}
@@ -78,7 +80,7 @@ species butterfly{
 	reflex butterfly_die when: ((my_cycle+1) mod butterfly_life_cycle=0){
 		do die;
 	}
-	
+
 	// reproduce once in its lifecycle, in the middle of its lifecycle
 	reflex reproduce when: ((my_cycle+1) mod (butterfly_life_cycle/2)=0){
 		list<cell>cell_surroundings <- my_cell.neighbors where(!(empty(butterfly inside each)));
@@ -170,7 +172,12 @@ species predator {
 	
 	reflex move{
 		cell next_cell <- one_of(my_cell.neighbors where(empty(predator inside each)));
-		list<butterfly>butterflies <-butterfly inside next_cell;
+		int color_dominant <- get_most_color();
+		write color_dominant;
+		
+		// extension 1: hunt the most dominant color 
+		list<butterfly>butterflies <-butterfly inside next_cell where (each.red=color_dominant);	
+		
 		if (length(butterflies)>0){
 			if (abs(my_cell.red-butterflies[0].red) > color_threshold_camouflage
 				and abs(my_cell.green-butterflies[0].green) > color_threshold_camouflage
@@ -188,6 +195,22 @@ species predator {
 		location <- next_cell.location ;	
 	}
 	
+	action get_most_color{
+		int max_butterflies <- max(nb_butterfly_white, nb_butterfly_black, nb_butterfly_gray);
+		int red_color;
+		if (max_butterflies = nb_butterfly_white){
+		    red_color <- 255;
+		}
+		else if (max_butterflies = nb_butterfly_black){
+		    red_color <- 0;
+		}
+		else{
+		    red_color <- 127;
+		}
+		return red_color;
+	}
+	
+
 
 	aspect base{
 		draw my_icon color: #blue size:1.8;
@@ -238,3 +261,4 @@ experiment exp type: gui {
 		monitor "Number of predators" value: nb_predator;
 	}
 }
+

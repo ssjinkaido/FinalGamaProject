@@ -6,7 +6,7 @@
 */
 
 
-model basemodel
+model modelex2
 
 /* Insert your model definition here */
 global{
@@ -61,9 +61,9 @@ species butterfly{
 			my_icon <-image_file("../includes/whitebutterfly.png");
 		}
 		else{
-			red <- 127;
-			green <- 127;
-			blue <- 127;
+			red <-127;
+			green <-127;
+			blue <-127;
 			color <-rgb(red, green, blue, 255);
 			my_icon <-image_file("../includes/graybutterfly.png");
 		}
@@ -170,7 +170,10 @@ species predator {
 	
 	reflex move{
 		cell next_cell <- one_of(my_cell.neighbors where(empty(predator inside each)));
-		list<butterfly>butterflies <-butterfly inside next_cell;
+		int color_dominant <- get_most_color();
+		
+		// extension 1: hunt the most dominant color 
+		list<butterfly>butterflies <-butterfly inside next_cell where (each.red=color_dominant);
 		if (length(butterflies)>0){
 			if (abs(my_cell.red-butterflies[0].red) > color_threshold_camouflage
 				and abs(my_cell.green-butterflies[0].green) > color_threshold_camouflage
@@ -186,6 +189,21 @@ species predator {
 		next_cell.is_occupied<- true;
 		my_cell <- next_cell;
 		location <- next_cell.location ;	
+	}
+	
+	action get_most_color{
+		int max_butterflies <- max(nb_butterfly_white, nb_butterfly_black, nb_butterfly_gray);
+		int red_color;
+		if (max_butterflies = nb_butterfly_white){
+		    red_color <- 255;
+		}
+		else if (max_butterflies = nb_butterfly_black){
+		    red_color <- 0;
+		}
+		else{
+		    red_color <- 127;
+		}
+		return red_color;
 	}
 	
 
@@ -210,6 +228,15 @@ grid cell height:cell_height width:cell_width neighbors: neighborhood_size{
 		green <- color_value;
 		blue <- color_value;	
 		color <-rgb(red, green, blue, 255);
+	}
+	
+	//extension 2: gradient change in each cycle
+	reflex change_color{
+		int color_value <- int((location.x-1+ cycle*2)mod 100/2*color_increment);
+		red <- color_value;
+		green <- color_value;
+		blue <- color_value;
+		color <-rgb(color_value, color_value, color_value, 255);
 	}
 }
 
