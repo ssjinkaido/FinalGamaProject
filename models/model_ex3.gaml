@@ -14,14 +14,14 @@ global{
 	int cell_height <-50;
 	int neighborhood_size <-8;
 	
-	int nb_butterfly_init <-250;
+	int nb_butterfly_init <-150;
 	int butterfly_nb_max_offsprings <- 10;
 	float butterfly_proba_reproduce <- 0.005;
 	int butterfly_life_cycle <-200;
 	int nb_dead <-0;
 	int nb_born <-0;
 	string algorithm <- "Dijkstra" among: ["A*", "Dijkstra"] parameter: true;
-	int nb_predator_init <-20;
+	int nb_predator_init <- 15;
 	int color_threshold_camouflage <-30;
 	float color_increment <- 255/cell_width;
 	float step <- 1#h;
@@ -33,7 +33,6 @@ global{
 	int nb_butterfly_black->{length(butterfly where(each.red=0))};
 	int nb_butterfly_gray->{length(butterfly where(each.red=127))};
 	int color_changed_type <-1;
-
 	init{
 		create butterfly number: nb_butterfly_init;
 		create predator number: nb_predator_init;
@@ -42,6 +41,20 @@ global{
 	}
 	reflex pause_simulation when:(nb_butterfly+nb_predator=cell_width*cell_height) or(nb_butterfly=0){
 		do pause;
+	}
+	
+	reflex check_duplicated_cells{
+		loop v over: cell{
+			list<butterfly>btf <- butterfly inside v;
+			if length(btf)>1{
+				write "Butterfly in one cell";
+				do pause;
+			}
+			if (length(butterfly inside v)>0 and length(predator inside v)>0){
+//				write "Inside";
+//				do pause;
+			}
+		}
 	}
 }
 
@@ -57,25 +70,17 @@ species butterfly{
 		float prob <- rnd(0.0, 1.0);
 		if (prob < 1/3){
 			red <-0;
-			green <-0;
-			blue <-0;
-			color <-rgb(red, green, blue, 255);
 			my_icon <-image_file("../includes/blackbutterfly.png");
 		}
 		else if (prob > 1/3) and (prob < 2/3){
 			red <-255;
-			green <-255;
-			blue <-255;
-			color <-rgb(red, green, blue, 255);
 			my_icon <-image_file("../includes/whitebutterfly.png");
 		}
 		else{
 			red <- 127;
-			green <- 127;
-			blue <- 127;
-			color <-rgb(red, green, blue, 255);
 			my_icon <-image_file("../includes/graybutterfly.png");
 		}
+		color <-rgb(red, red, red, 255);
 		my_cell <- one_of(cell where(each.is_occupied=false));	
 		my_cell.is_occupied <- true;
 		location <- my_cell.location;
@@ -87,9 +92,10 @@ species butterfly{
 		if (length(next_cell_no_butterfly)>0){
 			cell next_cell <- one_of(next_cell_no_butterfly);
 			my_cell.is_occupied <- false;
-			next_cell.is_occupied <- true;
+//			next_cell.is_occupied <- true;
 			my_cell <- next_cell;
 			location <- next_cell.location ;
+			my_cell.is_occupied <- true;
 
 		}
 
@@ -114,18 +120,18 @@ species butterfly{
 			// white + white = white, black + black = black
 			if (butterfly_surrounding_color = color){
 				loop times: rnd(1, butterfly_nb_max_offsprings){
-					list<cell>offspring_neighbors <- my_cell.neighbors where(each.is_occupied=false);
-					if (length(offspring_neighbors) > 0){
+					list<cell>next_cell_not_occupied <- my_cell.neighbors where(each.is_occupied=false);
+					if (length(next_cell_not_occupied) > 0){
 						create species(self) number: 1{
-							cell offspring_cell <- one_of(offspring_neighbors);
-							my_cell <- offspring_cell;
-							location <- offspring_cell.location;
-							my_cell.is_occupied <- true;
-							red <- myself.red;
-							blue <- myself.blue;
-							green <- myself.green;
-							color <- rgb(red, green, blue, 255);
-							my_icon <- myself.my_icon;
+							cell next_cell <- one_of(next_cell_not_occupied);
+							self.my_cell <- next_cell;
+							self.location <-next_cell.location;
+//							my_cell <- offspring_cell;
+//							location <- offspring_cell.location;
+							self.my_cell.is_occupied <- true;
+							self.red <- myself.red;
+							self.color <- rgb(red, red, red, 255);
+							self.my_icon <- myself.my_icon;
 
 							nb_born <- nb_born+1;
 						}
@@ -136,49 +142,42 @@ species butterfly{
 			// reproduction with gray butterfly
 			else{
 				loop times: rnd(1, butterfly_nb_max_offsprings){
-					list<cell>offspring_neighbors <- my_cell.neighbors where(each.is_occupied=false);
-					if (length(offspring_neighbors) > 0){
+					list<cell>next_cell_not_occupied <- my_cell.neighbors where(each.is_occupied=false);
+					if (length(next_cell_not_occupied) > 0){
 						create species(self) number: 1{
-							cell offspring_cell <- one_of(offspring_neighbors);
-							my_cell <- offspring_cell;
-							location <- offspring_cell.location;
-							my_cell.is_occupied<- true;
+//							cell offspring_cell <- one_of(offspring_neighbors);
+							cell next_cell <- one_of(next_cell_not_occupied);
+							self.my_cell <- next_cell;
+							self.location <-next_cell.location;
+//							my_cell <- offspring_cell;
+//							location <- offspring_cell.location;
+							self.my_cell.is_occupied<- true;
 							nb_born <- nb_born+1;
 							// gray + gray => 25% white 25% black 50% gray
 							if (myself.red=127) and(butterfly_choosen.red=127){
 								float prob <- rnd(0.0, 1.0);
 								if(prob < 1/4){
 									self.red <- 255;
-									self.green <- 255;
-									self.blue <- 255;
-									my_icon <-image_file("../includes/whitebutterfly.png");
+									self.my_icon <-image_file("../includes/whitebutterfly.png");
 								}else if (prob>1/4 and prob <1/2){
 									self.red <- 0;
-									self.green <- 0;
-									self.blue <- 0;
-									my_icon <-image_file("../includes/blackbutterfly.png");
+									self.my_icon <-image_file("../includes/blackbutterfly.png");
 								}else{
 									self.red <- 127;
-									self.green <- 127;
-									self.blue <- 127;
-									my_icon <-image_file("../includes/graybutterfly.png");
+									self.my_icon <-image_file("../includes/graybutterfly.png");
 								}
 							}
 							// gray + black/white => 50% gray 50% black/white
 							else{
 								if(flip(0.5)){
 									self.red <- myself.red;
-									self.green <- myself.green;
-									self.blue <- myself.blue;
-									my_icon <-myself.my_icon;
+									self.my_icon <-myself.my_icon;
 								}else{
 									self.red <- butterfly_choosen.red;
-									self.green <- butterfly_choosen.green;
-									self.blue <- butterfly_choosen.blue;
-									my_icon <-butterfly_choosen.my_icon;
+									self.my_icon <-butterfly_choosen.my_icon;
 								}
 							}
-							self.color <- rgb(self.red, self.green, self.blue, 255);
+							self.color <- rgb(self.red, self.red, self.red, 255);
 						}
 					}
 				}
@@ -192,13 +191,14 @@ species butterfly{
 	}
 }
 
+
 species predator {
 	cell my_cell;
 	image_file my_icon <- image_file("../includes/wolf.png");
-	point goal <-nil;
+	point goal;
 	point source;
 	path the_path;
-	butterfly target_butterfly <-nil;
+	butterfly target_butterfly;
 	float x;
 	float y;
 	init{
@@ -226,31 +226,28 @@ species predator {
 				}
 			}
 		}
+		
 		list<cell>target <- dup_next_cell where(!(empty(butterfly inside each)));
 		int color_dominant <- get_most_color();
 		// extension 1: hunt the most dominant color 
-		
 		list<butterfly>butterflies;
 		loop t over:target{
-			if length(butterfly inside t)>0{
-				add (butterfly inside t)[0] to: butterflies;
-			}	
+			add (butterfly inside t)[0] to: butterflies;	
 		} 
-		butterflies <- butterflies where (each.red=color_dominant);
 		
+		butterflies <- butterflies where (each.red=color_dominant);
 		if (length(butterflies)>0){
 			butterflies <- shuffle(butterflies);
 			target_butterfly <- first(butterflies);
 			source <- my_cell.location;
 			goal <-target_butterfly.my_cell.location;
 		}
-
 	}
 	
 	reflex move{
 		if (goal !=nil and target_butterfly!=nil and !dead(target_butterfly)){
 			source <- my_cell.location;
-			goal <-target_butterfly.my_cell.location;
+			goal <- target_butterfly.my_cell.location;
 			using topology(cell) {
 				the_path <- path_between((cell as_map (each::each.grid_value)), source, goal);
 				x <- point(the_path.vertices at 1).x;
@@ -258,66 +255,106 @@ species predator {
 				
 			}
 		}
-		list<cell> next_cell1 <- my_cell.neighbors where(empty(predator inside each));
-
-		if (target_butterfly!=nil and !dead(target_butterfly)){
-			list<cell>next_cell2 <- next_cell1 where(each.location.x=x and each.location.y=y);
-
-			if (length(next_cell2)>0){
-				cell next_cell <-first(next_cell2);
+		list<cell> next_cell_no_predator <- my_cell.neighbors where(empty(predator inside each));
+		if (goal!=nil and target_butterfly!=nil and !dead(target_butterfly)){
+//			write ("Not null");
+			list<cell>next_cell_goal <- next_cell_no_predator where(each.location.x=x and each.location.y=y);
+			if (length(next_cell_goal)>0){
+//				write "Go to location near target";
+				cell next_cell <- first(next_cell_goal);
+				do set_next_cell(next_cell);
 				list<butterfly>butterflies <-butterfly inside next_cell;
+//				write "Is there butterflies: " + butterflies;
+				
 				if (length(butterflies)>0){
-					if (abs(my_cell.red-butterflies[0].red) > color_threshold_camouflage
-						and abs(my_cell.green-butterflies[0].green) > color_threshold_camouflage
-						and abs(my_cell.blue-butterflies[0].blue) > color_threshold_camouflage){
-						if (first(butterflies)=target_butterfly){
+//					write "Btf inside my cell";
+					if (first(butterflies)=target_butterfly){
+//						write "Target inside my cell";
+						if (abs(my_cell.red-butterflies[0].red) > color_threshold_camouflage){
 							target_butterfly<-nil;
 							goal <- nil;
 							x<-0.0;
 							y<-0.0;
+							the_path <- nil;
+							source <-nil;
+							nb_dead <- nb_dead +1;
+							ask butterflies{
+								do die;
+							}	
+//							write "Eat target";
+						
+						} else{
+//							write "Camouflage: " + my_cell.red + ": " + butterflies[0].red;
+							nb_times_camouflage <- nb_times_camouflage + 1;
 						}
+					} else{
+//						write "Butterfly on my way";
+						if (abs(my_cell.red-butterflies[0].red) > color_threshold_camouflage){
+//							write "Eat on the way";
+							nb_dead <- nb_dead +1;
+							ask butterflies{
+								do die;
+							}	
+						}
+						else{
+//							write "Camouflage: " + my_cell.red + ": " + butterflies[0].red;
+							nb_times_camouflage <- nb_times_camouflage + 1;
+						}
+					}
+
+		
+				}
+			} else{
+//				write "Cannot moved to next cell, choose random";
+				cell next_cell <-first(next_cell_no_predator);
+				do set_next_cell(next_cell);
+				list<butterfly>butterflies <-butterfly inside next_cell;
+//				write "bbbb: " + butterflies;
+				if (length(butterflies)>0){
+					if (abs(my_cell.red-butterflies[0].red) > color_threshold_camouflage){
 						nb_dead <- nb_dead +1;
 						ask butterflies{
 							do die;
 						}	
 						
-					}
-					else{
+					} else{
+//						write "Camouflage: " + my_cell.red + ": " + butterflies[0].red;
 						nb_times_camouflage <- nb_times_camouflage + 1;
 					}
-	
+		
 				}
-				my_cell.is_occupied<- false;
-				next_cell.is_occupied<- true;
-				my_cell <- next_cell;
-				location <- next_cell.location ;	
-			} 
+			}
 		}
-		else if(target_butterfly=nil) {
-			cell next_cell <- one_of(my_cell.neighbors where(empty(predator inside each)));
+		else if(target_butterfly=nil or goal=nil) {
+//			write "No target, move randomly";
+			cell next_cell <- one_of(next_cell_no_predator);
+			do set_next_cell(next_cell);
 			list<butterfly>butterflies <-butterfly inside next_cell;
 			if (length(butterflies)>0){
-				if (abs(my_cell.red-butterflies[0].red) > color_threshold_camouflage
-					and abs(my_cell.green-butterflies[0].green) > color_threshold_camouflage
-					and abs(my_cell.blue-butterflies[0].blue) > color_threshold_camouflage){
+				if (abs(my_cell.red-butterflies[0].red) > color_threshold_camouflage){
+//					write "Dead bt: "+ butterflies;
 					nb_dead <- nb_dead +1;
 					ask butterflies{
 						do die;
 					}	
-				}
-				else{
+					
+				}else{
+//					write "Camouflage: " + abs(my_cell.red-butterflies[0].red);
 					nb_times_camouflage <- nb_times_camouflage + 1;
 				}
 	
 			}
-			my_cell.is_occupied<- false;
-			next_cell.is_occupied<- true;
-			my_cell <- next_cell;
-			location <- next_cell.location ;	
 		}	
 
 	}
 	
+	action set_next_cell(cell next_cell){
+		my_cell.is_occupied<- false;
+		
+		my_cell <- next_cell;
+		location <- next_cell.location ;
+		my_cell.is_occupied<- true;
+	}
 	action get_most_color{
 		int max_butterflies <- max(nb_butterfly_white, nb_butterfly_black, nb_butterfly_gray);
 		int red_color;
@@ -333,10 +370,9 @@ species predator {
 		return red_color;
 	}
 	
-	
 
 	aspect base{
-		draw my_icon color: #blue size:1.8;
+		draw my_icon color: #blue size:1.7;
 	}
 }
 
@@ -350,8 +386,7 @@ grid cell height:cell_height width:cell_width neighbors: neighborhood_size optim
 	list<cell> neighbors  <- (self neighbors_at neighborhood_size);
 	
 	init{
-		// init gradient environment (this code can adapt to any cell_width, cell_height)
-		int color_value <- int((location.x-50/cell_width)/(100/cell_width)*color_increment);
+		int color_value <- int(grid_x*color_increment);
 		red <- color_value;
 		green <- color_value;
 		blue <- color_value;	
@@ -362,43 +397,37 @@ grid cell height:cell_height width:cell_width neighbors: neighborhood_size optim
 		float prob <-rnd(0.0, 1.0);
 		int color_value;
 		if (color_changed_type=1){
-			//color increase horizontally (left to right)
-			color_value <- int(((location.x+(cycle)mod 100)mod 100  -50/cell_width)/(100/cell_width)*color_increment);
-		}else if(color_changed_type=1){
-			//color increase vertically (up to down)
-			color_value <- int(((location.y+(cycle)mod 100) mod 100  -50/cell_width)/(100/cell_width)*color_increment);
-		}else if (color_changed_type=1){
-			//color increase horizontally (right to left)
-			color_value <- int((((location.x-(cycle)mod 100)+100) mod 100  -50/cell_width)/(100/cell_width)*color_increment);
+			color_value <- int((grid_x+cycle mod cell_width)mod cell_width*color_increment);
+		}else if (color_changed_type=2){
+			color_value <- int((grid_y+cycle mod cell_width)mod cell_height*color_increment);
+		}else if (color_changed_type=3){
+			color_value <- int((grid_x-cycle mod cell_width+cell_width)mod cell_width*color_increment);
+		}else if (color_changed_type=4){
+			color_value <- int((grid_y-cycle mod cell_height + cell_height)mod cell_height*color_increment);
+			
 		}
-		else if(color_changed_type=4){
-			//color increase vertically (down to up)
-			color_value <- int((((location.y-(cycle)mod 100)+100) mod 100  -50/cell_width)/(100/cell_width)*color_increment);
-		}else{
+		else{
 			if (prob < 0.25){
-			//color increase horizontally (left to right)
-				color_value <- int(((location.x+(cycle)mod 100)mod 100  -50/cell_width)/(100/cell_width)*color_increment);
+				//color increase horizontally (left to right)
+				color_value <- int((grid_x+cycle mod cell_width)mod cell_width*color_increment);
 			}else if(prob > 0.25 and prob < 0.5){
 				//color increase vertically (up to down)
-				color_value <- int(((location.y+(cycle)mod 100) mod 100  -50/cell_width)/(100/cell_width)*color_increment);
+				color_value <- int((grid_y+cycle mod cell_width)mod cell_height*color_increment);
 			}else if (prob > 0.5 and prob < 0.75){
 				//color increase horizontally (right to left)
-				color_value <- int((((location.x-(cycle)mod 100)+100) mod 100  -50/cell_width)/(100/cell_width)*color_increment);
+				color_value <- int((grid_x-cycle mod cell_width+cell_width)mod cell_width*color_increment);
 			}
 			else{
 				//color increase vertically (down to up)
-				color_value <- int((((location.y-(cycle)mod 100)+100) mod 100  -50/cell_width)/(100/cell_width)*color_increment);
+				color_value <- int((grid_y-cycle mod cell_height + cell_height)mod cell_height*color_increment);
 			}
+			
 		}
 		
 		red <- color_value;
-		green <- color_value;
-		blue <- color_value;
 		color <-rgb(color_value, color_value, color_value, 255);
 	}
 }
-
-
 
 experiment exp type: gui {
 	output {
@@ -415,7 +444,6 @@ experiment exp type: gui {
 				data "number_of_black_butterflies" value: nb_butterfly_black color: #green;
 				data "number_of_gray_butterflies" value: nb_butterfly_gray color: #red;
 				data "number_of_all_butterflies" value: nb_butterfly color: #purple;
-				
 			}
 		}
 		monitor "Number of butterfly" value: nb_butterfly;
