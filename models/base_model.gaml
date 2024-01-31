@@ -69,12 +69,11 @@ species butterfly{
 	}
 	
 	reflex move when: (current_date.hour > 9 and current_date.hour < 17){
-		list<cell>next_cell_no_predator <- my_cell.neighbors where(empty(predator inside each));
-		list<cell>next_cell_no_butterfly <- next_cell_no_predator where(empty(butterfly inside each));
-		list<cell>next_cell_no_occupied <-next_cell_no_butterfly where(each.is_occupied=false);
-		if (length(next_cell_no_occupied)>0){
+		list<cell>next_cell_no_animal <- my_cell.neighbors where(empty(predator inside each) and empty(butterfly inside each));
+		list<cell>next_cell_not_occupied <-next_cell_no_animal where(each.is_occupied=false);
+		if (length(next_cell_not_occupied)>0){
 			
-			cell next_cell <- one_of(shuffle(next_cell_no_occupied));
+			cell next_cell <- one_of(shuffle(next_cell_not_occupied));
 			my_cell.is_occupied <- false;
 			my_cell <- next_cell;
 			location <- next_cell.location ;
@@ -103,16 +102,13 @@ species butterfly{
 			// white + white = white, black + black = black
 			if (butterfly_surrounding_color = color){
 				loop times: rnd(1, butterfly_nb_max_offsprings){
-					list<cell>next_cell_not_occupied <- my_cell.neighbors where(each.is_occupied=false);
-					list<cell>next_cell_no_predator <-next_cell_not_occupied where(empty(predator inside each));
-					list<cell>next_cell_no_butterfly <- next_cell_no_predator where(empty(butterfly inside each));
-					if (length(next_cell_no_butterfly) > 0){
+					list<cell>next_cell_no_animal <- my_cell.neighbors where(empty(predator inside each) and empty(butterfly inside each));
+					list<cell>next_cell_not_occupied <-next_cell_no_animal where(each.is_occupied=false);
+					if (length(next_cell_not_occupied) > 0){
 						create species(self) number: 1{
-							cell next_cell <- one_of(next_cell_no_butterfly);
+							cell next_cell <- one_of(next_cell_not_occupied);
 							self.my_cell <- next_cell;
 							self.location <-next_cell.location;
-//							my_cell <- offspring_cell;
-//							location <- offspring_cell.location;
 							self.my_cell.is_occupied <- true;
 							self.red_color <- myself.red_color;
 							self.color <- rgb(red_color, red_color, red_color, 255);
@@ -127,17 +123,13 @@ species butterfly{
 			// reproduction with gray butterfly
 			else{
 				loop times: rnd(1, butterfly_nb_max_offsprings){
-					list<cell>next_cell_not_occupied <- my_cell.neighbors where(each.is_occupied=false);
-					list<cell>next_cell_no_predator <-next_cell_not_occupied where(empty(predator inside each));
-					list<cell>next_cell_no_butterfly <- next_cell_no_predator where(empty(butterfly inside each));
-					if (length(next_cell_no_butterfly) > 0){
+					list<cell>next_cell_no_animal <- my_cell.neighbors where(empty(predator inside each) and empty(butterfly inside each));
+					list<cell>next_cell_not_occupied <-next_cell_no_animal where(each.is_occupied=false);
+					if (length(next_cell_not_occupied) > 0){
 						create species(self) number: 1{
-//							cell offspring_cell <- one_of(offspring_neighbors);
-							cell next_cell <- one_of(next_cell_no_butterfly);
+							cell next_cell <- one_of(next_cell_not_occupied);
 							self.my_cell <- next_cell;
 							self.location <-next_cell.location;
-//							my_cell <- offspring_cell;
-//							location <- offspring_cell.location;
 							self.my_cell.is_occupied<- true;
 							nb_butterfly_born <- nb_butterfly_born+1;
 							// gray + gray => 25% white 25% black 50% gray
