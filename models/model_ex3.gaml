@@ -228,7 +228,7 @@ species predator {
 			int white <- butterflies count(each.red_color=255);
 			int black <- butterflies count(each.red_color=0);
 			int gray <- butterflies count(each.red_color=127);
-			dominant_color <- get_most_color(white, black, gray);
+			dominant_color <- get_dominant_color(white, black, gray);
 			butterflies <- butterflies where (each.red_color=dominant_color);
 			if (length(butterflies)>0){
 				target_butterfly <- first(shuffle(butterflies));
@@ -334,7 +334,7 @@ species predator {
 		my_cell.is_occupied<- true;
 	}
 	
-	action get_most_color(int nb_white, int nb_black, int nb_gray){
+	action get_dominant_color(int nb_white, int nb_black, int nb_gray){
 		int max_butterflies_surroundings <- max(nb_white, nb_black, nb_gray);
 		int red_color;
 		if (max_butterflies_surroundings=nb_white and max_butterflies_surroundings=nb_black){
